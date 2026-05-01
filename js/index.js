@@ -749,9 +749,6 @@ function compareJsonAndDb({ jsonData, headers, dbRows, jsonJoinKey }) {
             return 0;
         });
 
-        console.log(groups);
-        console.log(sortedIndices);
-
         // 紐付け結果を一時保持するマップ (listIndex -> matchedObject)
         const matchMap = new Map();
 
@@ -767,8 +764,6 @@ function compareJsonAndDb({ jsonData, headers, dbRows, jsonJoinKey }) {
                 }
             });
         }
-
-        console.log(matchMap);
 
         // --- 漏れた要素に未使用行を割り当て ---
         sortedIndices.forEach(listIndex => {
