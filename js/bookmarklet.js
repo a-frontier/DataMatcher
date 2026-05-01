@@ -20,10 +20,13 @@
         const formKey = form.id || `form_${index}`;
 
         for (let el of elements) {
-            const { name, type, checked, value, disabled } = el;
+            const { name, type, checked, value } = el;
 
-            // name属性が未定義、空文字 ("")、_csrf、disabledの要素は除外
-            if (!name || name.trim() === "" || name === "_csrf" || disabled) continue;
+            // name属性が未定義、空文字 ("")、_csrfの要素は除外
+            if (!name || name.trim() === "" || name === "_csrf") continue;
+
+            // disabledの要素は除外
+            if (el.matches(":disabled")) continue;
 
             // ラジオボタン・チェックボックスは選択されているものだけを取得
             if ((type === "radio" || type === "checkbox") && !checked) {
