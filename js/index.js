@@ -53,6 +53,7 @@ document.addEventListener('DOMContentLoaded', function(){
     // 選択欄 / 操作ボタン
     const formSelector = document.getElementById('form-selector');
     const beanSelector = document.getElementById('bean-selector');
+    const clearButton = document.getElementById('clear-btn');
     const compareButton = document.getElementById('compare-btn');
     const showNgOnlyCheckbox = document.getElementById('filter-ng-only');
     const joinKeySelect = document.getElementById('json-join-key');
@@ -67,6 +68,9 @@ document.addEventListener('DOMContentLoaded', function(){
     // form / bean 選択
     formSelector.addEventListener('change', onFormSelectorChange);
     beanSelector.addEventListener('change', onBeanSelectorChange);
+
+    // 入力クリア
+    clearButton.addEventListener('click', onClearClick);
 
     // 比較実行
     compareButton.addEventListener('click', onCompareClick);
@@ -143,6 +147,19 @@ function onFormSelectorChange(e) {
 function onBeanSelectorChange(e) {
     // Beanが変わったので、突き合わせキー候補を更新
     scheduleSelectorRefresh();
+}
+
+/**
+ * テキストクリア
+ * @returns {void}
+ */
+function onClearClick(){
+    //  テキストクリア
+    document.getElementById('json-textarea').value = '';
+    document.getElementById('db-textarea').value = '';
+    //  チェンジイベント起動
+    onDbTextareaChangeRawSync();
+    createFormSelector();
 }
 
 /**
