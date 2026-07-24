@@ -514,20 +514,22 @@ function renderResults(results, formOnlyFields, dbOnlyFields) {
  *
  * - 1行目: ヘッダー（カラム名）
  * - 2行目以降: データ行（複数行可）
- * - 行区切り: CRLF(\r\n) （※CRはデータ内改行）
  *
  * @param {string} dbRaw - TSV生テキスト
  * @returns {{headers: string[], rows: Array<Record<string,string>>} | null}
  */
 function parseDbTsv(dbRaw){
-    // 行分割・空行除去
-    const lines = splitTsvLines(dbRaw)
-                    .map(l => l.replace(/\n/g, '')) // 念のため: LF単体が来た場合は行終端側で処理する想定
-                    .filter(l => l.trim() !== ""); // 空行を除去
+    if (dbRaw == null) return null;
+
+    // 行分割と空行の除外
+    const lines = splitTsvLines(dbRaw).filter(l => l.trim() !== "");
+
     if (lines.length === 0) return null;
+
     // Tabで分割してヘッダーを取得
     const headers = lines[0].split('\t').map(h => h.trim());
     if (headers.length === 0 || headers.every(h => h === "")) return null;
+
     // 2行目以降をデータ行として取得
     const rows = lines.slice(1).map(line => {
         // Tabで分割してデータを取得
@@ -543,48 +545,57 @@ function parseDbTsv(dbRaw){
 }
 
 /**
+ * レコード改行コード（#row-newline-char）を制御文字として取得
+ * @returns {string} \r\n | \n | \r
+ */
+function getRowNewlineCode() {
+    const el = document.getElementById('row-newline-char');
+    const val = el ? el.value : '\r\n';
+    return val.replace(/\\r/g, '\r').replace(/\\n/g, '\n');
+}
+
+/**
  * TSVの行分割
- * - CRLF(\r\n) は「行の終端」
- * - CR(\r) 単体は「データ内改行」とみなし、行分割しない
- * - ただし、CRLFが全く無い入力では LF(\n) を行終端とする
  *
- * @param {string} raw
+ * @param {string} row
  * @returns {string[]}
  */
-function splitTsvLines(raw){
-    if (raw == null) return [];
-    const s = String(raw);
+function splitTsvLines(row){
+    if (row == null) return [];
+    const s = String(row);
 
-    // 基本: CRLFでのみ区切る（CR単体は残す）
-    if (s.includes('\r\n')) {
+    // 行の終端を示す改行コードで区切る
+    const rowDelimiter = getRowNewlineCode();
+    if (rowDelimiter === '\r\n') {
+        // CRLF指定ならそのまま分割（誤検知のしようがないため）
         return s.split('\r\n');
+    } else if (rowDelimiter === '\n') {
+        // LF指定: 直前に \r が無い \n だけで分割する（CRLFを誤検知させない）
+        return s.split(/(?<!\r)\n/);
+    } else if (rowDelimiter === '\r') {
+        // CR指定: 直後に \n が無い \r だけで分割する（CRLFを誤検知させない）
+        return s.split(/\r(?!\n)/);
     }
 
-    // フォールバック: CRLFが無い場合のみ LF で区切る
-    return s.split('\n');
+    return [s];
 }
 
 /**
  * 改行コードをCRLFに正規化する（比較・表示用の正規化）
  *
- * このツールでは、以下の2種類の「改行」を区別して扱う。
- * - **行終端**: DB貼り付けTSV上の CRLF(\r\n)（TSVの行区切り）
- * - **データ内改行**: 値の中の CR(\r)
+ * このツールでは、行終端とデータ内改行を区別して扱う。
  *
  * ただし比較/表示の段階では、見た目と一致判定を安定させるため、
  * 値に含まれる改行はすべて CRLF(\r\n) に統一する。
  *
- * ※データ内改行（CR単体）の直後には必ず半角スペースが1つ付与されるため、
- * 　その **1つだけ** を削除してから正規化する。
+ * ※データ内改行（CR）の直後に半角スペースが付与されている場合は、削除してから正規化する。 mysql workbenchの仕様
  *
  * @param {any} value - 任意の値（null/undefined可）
  * @returns {string} CRLFに統一された文字列
  */
 function normalizeNewlinesToCrlf(value){
     const s = value == null ? "" : String(value);
-    // データ内の「CR改行」は、直後に半角スペースが1つ付与される仕様のため除去する
-    // - CRLF(\r\n) は行終端として扱うため対象外
-    // - CR単体(\r) の直後にある「半角スペース1つ」だけを削除
+    // データ内改行（CR）の直後に半角スペースが付与されている場合は、削除
     const cleaned = s.replace(/\r(?!\n) /g, '\r');
     // いったん全改行を \n に寄せてから CRLF に統一
     return cleaned.replace(/\r\n/g, '\n').replace(/\r/g, '\n').replace(/\n/g, '\r\n');
